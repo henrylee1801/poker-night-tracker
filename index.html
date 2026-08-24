@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Mines Poker Tracker</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>♠️</text></svg>">
+<style>
+  :root{
+    --felt-900:#0a2e22;
+    --felt-800:#0f3d2c;
+    --felt-700:#154d38;
+    --felt-600:#1c6349;
+    --gold:#e0b84b;
+    --gold-soft:#f0d98c;
+    --red:#e2564f;
+    --red-soft:#f6a29d;
+    --green-pos:#4fd18b;
+    --ink:#eef5f0;
+    --ink-dim:#a9c2b6;
+    --card-bg:#123527;
+    --card-border:#1e5a41;
+    --shadow:0 4px 14px rgba(0,0,0,.35);
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 50% -10%, var(--felt-700), var(--felt-900) 60%),
+      var(--felt-900);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    padding-bottom:88px;
+  }
+  header.top{
+    position:sticky; top:0; z-index:20;
+    background:linear-gradient(180deg, rgba(10,46,34,.97), rgba(10,46,34,.9));
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--card-border);
+    padding:14px 18px 10px;
+  }
+  header.top h1{
+    margin:0; font-size:20px; letter-spacing:.3px;
+    display:flex; align-items:center; gap:8px;
+  }
+  header.top h1 .suit{color:var(--gold);}
+  header.top .sub{color:var(--ink-dim); font-size:12.5px; margin-top:2px;}
+
+  main{max-width:640px; margin:0 auto; padding:16px;}
+
+  .card{
+    background:var(--card-bg);
+    border:1px solid var(--card-border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:16px;
+    margin-bottom:16px;
+  }
+  .card h2{margin:0 0 12px; font-size:15px; color:var(--gold-soft); text-transform:uppercase; letter-spacing:.6px;}
+
+  input[type=text], input[type=number]{
+    background:var(--felt-900);
+    border:1px solid var(--card-border);
+    color:var(--ink);
+    border-radius:10px;
+    padding:10px 12px;
+    font-size:15px;
+    width:100%;
+    outline:none;
+  }
+  input[type=text]:focus, input[type=number]:focus{border-color:var(--gold);}
+
+  button{
+    font-family:inherit;
+    cursor:pointer;
+    border:none;
+    border-radius:10px;
+    padding:9px 14px;
+    font-size:14px;
+    font-weight:600;
+    transition:transform .06s ease, filter .15s ease;
+  }
+  button:active{transform:scale(.96);}
+  .btn-primary{background:var(--gold); color:#26200a;}
+  .btn-primary:hover{filter:brightness(1.08);}
+  .btn-ghost{background:transparent; color:var(--ink); border:1px solid var(--card-border);}
+  .btn-ghost:hover{border-color:var(--gold);}
+  .btn-danger{background:transparent; color:var(--red-soft); border:1px solid var(--red);}
+  .btn-danger:hover{background:rgba(226,86,79,.12);}
+  .btn-sm{padding:6px 10px; font-size:12.5px; border-radius:8px;}
+  .btn-chip{background:var(--felt-700); color:var(--gold-soft); border:1px solid var(--card-border);}
+  .btn-chip:hover{border-color:var(--gold);}
+  button:disabled{opacity:.4; cursor:not-allowed; transform:none;}
+
+  .row{display:flex; gap:8px;}
+  .row.wrap{flex-wrap:wrap;}
+  .row.between{justify-content:space-between; align-items:center;}
+  .grow{flex:1;}
+
+  .player{
+    border:1px solid var(--card-border);
+    border-radius:12px;
+    padding:12px;
+    margin-bottom:10px;
+    background:linear-gradient(180deg, rgba(255,255,255,.02), transparent);
+  }
+  .player.done{opacity:.75;}
+  .player .name-row{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+  .player .name{font-size:16px; font-weight:700;}
+  .player .status{font-size:11.5px; padding:2px 8px; border-radius:20px; font-weight:700; letter-spacing:.3px;}
+  .status.playing{background:rgba(224,184,75,.15); color:var(--gold-soft); border:1px solid rgba(224,184,75,.4);}
+  .status.cashed{background:rgba(79,209,139,.15); color:var(--green-pos); border:1px solid rgba(79,209,139,.4);}
+  .stat-line{display:flex; gap:14px; font-size:13px; color:var(--ink-dim); margin-bottom:10px; flex-wrap:wrap;}
+  .stat-line b{color:var(--ink);}
+  .net.pos{color:var(--green-pos); font-weight:700;}
+  .net.neg{color:var(--red-soft); font-weight:700;}
+
+  .quickbuy{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;}
+  .cashout-row{display:flex; gap:6px; margin-top:6px;}
+  .cashout-row input{width:110px;}
+
+  .balance-banner{
+    border-radius:12px; padding:12px 14px; margin-bottom:14px;
+    font-size:13.5px; font-weight:600; display:flex; align-items:center; gap:10px;
+  }
+  .balance-banner.ok{background:rgba(79,209,139,.12); border:1px solid rgba(79,209,139,.4); color:var(--green-pos);}
+  .balance-banner.bad{background:rgba(226,86,79,.12); border:1px solid rgba(226,86,79,.4); color:var(--red-soft);}
+  .balance-banner.info{background:rgba(224,184,75,.1); border:1px solid rgba(224,184,75,.3); color:var(--gold-soft);}
+
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  th,td{text-align:left; padding:8px 6px; border-bottom:1px solid var(--card-border);}
+  th{color:var(--ink-dim); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.4px;}
+  tr:last-child td{border-bottom:none;}
+
+  .bar-track{background:rgba(255,255,255,.06); border-radius:6px; height:8px; overflow:hidden; margin-top:4px;}
+  .bar-fill{height:100%; border-radius:6px;}
+  .bar-fill.pos{background:var(--green-pos);}
+  .bar-fill.neg{background:var(--red-soft);}
+
+  .session-summary{border:1px solid var(--card-border); border-radius:12px; padding:12px 14px; margin-bottom:12px;}
+  .session-summary .title-row{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;}
+  .session-summary .title{font-weight:700; font-size:14.5px;}
+  .session-summary .date{font-size:12px; color:var(--ink-dim);}
+
+  .empty{color:var(--ink-dim); font-size:13.5px; text-align:center; padding:24px 10px;}
+
+  nav.tabs{
+    position:fixed; bottom:0; left:0; right:0; z-index:30;
+    background:rgba(10,46,34,.97); backdrop-filter:blur(8px);
+    border-top:1px solid var(--card-border);
+    display:flex;
+  }
+  nav.tabs button{
+    flex:1; background:none; border:none; border-radius:0;
+    padding:12px 4px 10px; color:var(--ink-dim); font-size:12px; font-weight:600;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+  }
+  nav.tabs button .icon{font-size:19px;}
+  nav.tabs button.active{color:var(--gold);}
+
+  .titlebar-input{background:transparent; border:none; color:var(--gold-soft); font-size:16px; font-weight:700; padding:2px 0; width:100%;}
+  .titlebar-input:focus{outline:none; border-bottom:1px solid var(--gold);}
+
+  .footer-actions{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; padding:10px 0 4px;}
+  .footer-actions button{font-size:12.5px;}
+  .hint{font-size:11.5px; color:var(--ink-dim); text-align:center; margin-top:6px;}
+
+  .toast{
+    position:fixed; bottom:96px; left:50%; transform:translateX(-50%);
+    background:var(--gold); color:#26200a; padding:10px 16px; border-radius:20px;
+    font-size:13px; font-weight:700; box-shadow:var(--shadow); z-index:50;
+    opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(-4px);}
+
+  ::placeholder{color:#6f8c7e;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1><span class="suit">♠</span> Mines Poker Tracker</h1>
+  <div class="sub" id="headerSub">Buy-ins, cash-outs, and who actually owes who.</div>
+</header>
+
+<main id="main"></main>
+
+<nav class="tabs">
+  <button data-tab="tonight" class="active"><span class="icon">🃏</span>Tonight</button>
+  <button data-tab="history"><span class="icon">📜</span>History</button>
+  <button data-tab="leaderboard"><span class="icon">🏆</span>Leaderboard</button>
+  <button data-tab="data"><span class="icon">💾</span>Data</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<input type="file" id="importFile" accept="application/json" style="display:none">
+
+<script>
+(function(){
+  "use strict";
+
+  const STORAGE_KEY = "mines_poker_tracker_v1";
+  let db = loadDB();
+  let activeTab = "tonight";
+
+  function loadDB(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw) return JSON.parse(raw);
+    }catch(e){ console.error("Failed to load data", e); }
+    return { players: [], sessions: [], currentSessionId: null };
+  }
+  function saveDB(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+  }
+  function uid(){
+    return (crypto.randomUUID ? crypto.randomUUID() : "id-" + Date.now() + "-" + Math.random().toString(16).slice(2));
+  }
+  function money(n){
+    const v = Math.round((n + Number.EPSILON) * 100) / 100;
+    const sign = v < 0 ? "-" : "";
+    return sign + "$" + Math.abs(v).toLocaleString(undefined, {minimumFractionDigits: v % 1 === 0 ? 0 : 2, maximumFractionDigits: 2});
+  }
+  function fmtDate(iso){
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+  }
+  function toast(msg){
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toast._h);
+    toast._h = setTimeout(()=>t.classList.remove("show"), 1800);
+  }
+
+  function getPlayer(id){ return db.players.find(p => p.id === id); }
+
+  function getCurrentSession(){
+    if(!db.currentSessionId) return null;
+    return db.sessions.find(s => s.id === db.currentSessionId) || null;
+  }
+  function ensureCurrentSession(){
+    let s = getCurrentSession();
+    if(s) return s;
+    s = {
+      id: uid(),
+      title: "Poker Night — " + new Date().toLocaleDateString(undefined,{month:'short', day:'numeric'}),
+      date: new Date().toISOString(),
+      entries: [],
+      finished: false
+    };
+    db.sessions.push(s);
+    db.currentSessionId = s.id;
+    return s;
+  }
+
+  function sessionEntry(session, playerId){
+    return session.entries.find(e => e.playerId === playerId);
+  }
+
+  function computeSessionTotals(session){
+    let totalBuyIn = 0, totalCashOut = 0, cashedCount = 0;
+    session.entries.forEach(e => {
+      totalBuyIn += e.buyIns.reduce((a,b)=>a+b, 0);
+      if(e.cashOut !== null && e.cashOut !== undefined){
+        totalCashOut += e.cashOut;
+        cashedCount++;
+      }
+    });
+    return { totalBuyIn, totalCashOut, cashedCount, total: session.entries.length, allCashedOut: session.entries.length > 0 && cashedCount === session.entries.length };
+  }
+
+  function entryNet(entry){
+    const buyIn = entry.buyIns.reduce((a,b)=>a+b,0);
+    if(entry.cashOut === null || entry.cashOut === undefined) return -buyIn;
+    return entry.cashOut - buyIn;
+  }
+
+  function computeLifetimeStats(){
+    const stats = {};
+    db.players.forEach(p => {
+      stats[p.id] = { playerId:p.id, name:p.name, nights:0, totalBuyIn:0, totalCashOut:0, net:0, best:null, worst:null };
+    });
+    db.sessions.forEach(session => {
+      if(!session.finished) return;
+      session.entries.forEach(e => {
+        const s = stats[e.playerId];
+        if(!s) return;
+        const buyIn = e.buyIns.reduce((a,b)=>a+b,0);
+        const cashOut = e.cashOut ?? 0;
+        const net = cashOut - buyIn;
+        s.nights += 1;
+        s.totalBuyIn += buyIn;
+        s.totalCashOut += cashOut;
+        s.net += net;
+        if(s.best === null || net > s.best) s.best = net;
+        if(s.worst === null || net < s.worst) s.worst = net;
+      });
+    });
+    return Object.values(stats).filter(s => s.nights > 0).sort((a,b) => b.net - a.net);
+  }
+
+  // ---------- Actions ----------
+
+  function addPlayerToSession(name){
+    name = name.trim();
+    if(!name) return;
+    let player = db.players.find(p => p.name.toLowerCase() === name.toLowerCase());
+    if(!player){
+      player = { id: uid(), name };
+      db.players.push(player);
+    }
+    const session = ensureCurrentSession();
+    if(sessionEntry(session, player.id)){
+      toast(name + " is already in tonight's game");
+      return;
+    }
+    session.entries.push({ playerId: player.id, buyIns: [], cashOut: null });
+    saveDB();
+    render();
+  }
+
+  function removePlayerFromSession(playerId){
+    const session = getCurrentSession();
+    if(!session) return;
+    session.entries = session.entries.filter(e => e.playerId !== playerId);
+    saveDB();
+    render();
+  }
+
+  function addBuyIn(playerId, amount){
+    const session = getCurrentSession();
+    if(!session) return;
+    const entry = sessionEntry(session, playerId);
+    if(!entry || amount <= 0) return;
+    entry.buyIns.push(amount);
+    saveDB();
+    render();
+  }
+
+  function undoLastBuyIn(playerId){
+    const session = getCurrentSession();
+    if(!session) return;
+    const entry = sessionEntry(session, playerId);
+    if(!entry || entry.buyIns.length === 0) return;
+    entry.buyIns.pop();
+    saveDB();
+    render();
+  }
+
+  function setCashOut(playerId, amount){
+    const session = getCurrentSession();
+    if(!session) return;
+    const entry = sessionEntry(session, playerId);
+    if(!entry) return;
+    entry.cashOut = amount;
+    saveDB();
+    render();
+  }
+
+  function reopenPlayer(playerId){
+    const session = getCurrentSession();
+    if(!session) return;
+    const entry = sessionEntry(session, playerId);
+    if(!entry) return;
+    entry.cashOut = null;
+    saveDB();
+    render();
+  }
+
+  function finishNight(){
+    const session = getCurrentSession();
+    if(!session || session.entries.length === 0) return;
+    const totals = computeSessionTotals(session);
+    if(!totals.allCashedOut){
+      if(!confirm("Not everyone has cashed out yet. Finish the night anyway?")) return;
+    }
+    session.finished = true;
+    db.currentSessionId = null;
+    saveDB();
+    toast("Night saved to History");
+    activeTab = "history";
+    render();
+  }
+
+  function deleteSession(sessionId){
+    if(!confirm("Delete this night? This can't be undone.")) return;
+    db.sessions = db.sessions.filter(s => s.id !== sessionId);
+    if(db.currentSessionId === sessionId) db.currentSessionId = null;
+    saveDB();
+    render();
+  }
+
+  function copySummary(){
+    const session = getCurrentSession();
+    if(!session) return;
+    const totals = computeSessionTotals(session);
+    let lines = [session.title, fmtDate(session.date), ""];
+    session.entries.forEach(e => {
+      const p = getPlayer(e.playerId);
+      const net = entryNet(e);
+      const status = (e.cashOut === null || e.cashOut === undefined) ? " (still playing)" : "";
+      lines.push(`${p.name}: ${net >= 0 ? "+" : ""}${money(net)}${status}`);
+    });
+    lines.push("");
+    lines.push(`Total buy-ins: ${money(totals.totalBuyIn)}  |  Total cash-outs: ${money(totals.totalCashOut)}`);
+    const text = lines.join("\n");
+    navigator.clipboard?.writeText(text).then(()=>toast("Summary copied to clipboard")).catch(()=>{
+      prompt("Copy this summary:", text);
+    });
+  }
+
+  function exportData(){
+    const blob = new Blob([JSON.stringify(db, null, 2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = `mines-poker-backup-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function importData(file){
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const parsed = JSON.parse(reader.result);
+        if(!parsed.players || !parsed.sessions) throw new Error("Not a valid backup file");
+        if(!confirm("This will replace all current data with the imported backup. Continue?")) return;
+        db = parsed;
+        db.currentSessionId = db.currentSessionId || null;
+        saveDB();
+        toast("Data imported");
+        render();
+      }catch(e){
+        alert("Couldn't import that file: " + e.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // ---------- Rendering ----------
+
+  function render(){
+    document.querySelectorAll("nav.tabs button").forEach(b => {
+      b.classList.toggle("active", b.dataset.tab === activeTab);
+    });
+    const main = document.getElementById("main");
+    if(activeTab === "tonight") main.innerHTML = renderTonight();
+    else if(activeTab === "history") main.innerHTML = renderHistory();
+    else if(activeTab === "leaderboard") main.innerHTML = renderLeaderboard();
+    else if(activeTab === "data") main.innerHTML = renderData();
+    bindDynamicEvents();
+  }
+
+  function renderTonight(){
+    const session = getCurrentSession();
+    if(!session || session.entries.length === 0){
+      return `
+        <div class="card">
+          <h2>Start Tonight's Game</h2>
+          <div class="row">
+            <input type="text" id="newPlayerInput" class="grow" placeholder="Player name" list="rosterList">
+            <button class="btn-primary" id="addPlayerBtn">Add</button>
+          </div>
+          <datalist id="rosterList">
+            ${db.players.map(p => `<option value="${escapeHtml(p.name)}">`).join("")}
+          </datalist>
+          <div class="hint">Add each player as they sit down. You can add buy-ins as you go.</div>
+        </div>
+      `;
+    }
+
+    const totals = computeSessionTotals(session);
+    let balanceHtml = "";
+    if(totals.allCashedOut){
+      const diff = Math.round((totals.totalBuyIn - totals.totalCashOut) * 100) / 100;
+      if(Math.abs(diff) < 0.005){
+        balanceHtml = `<div class="balance-banner ok">✓ Chips balance — buy-ins and cash-outs match.</div>`;
+      }else{
+        balanceHtml = `<div class="balance-banner bad">⚠ Off by ${money(Math.abs(diff))} — ${diff > 0 ? "cash-outs are short" : "cash-outs are over"} the total buy-ins. Double-check someone's count.</div>`;
+      }
+    }else{
+      balanceHtml = `<div class="balance-banner info">${totals.cashedCount}/${totals.total} cashed out · ${money(totals.totalBuyIn)} in play</div>`;
+    }
+
+    const playersHtml = session.entries.map(entry => {
+      const p = getPlayer(entry.playerId);
+      const buyIn = entry.buyIns.reduce((a,b)=>a+b,0);
+      const cashedOut = entry.cashOut !== null && entry.cashOut !== undefined;
+      const net = entryNet(entry);
+      return `
+        <div class="player ${cashedOut ? 'done':''}">
+          <div class="name-row">
+            <span class="name">${escapeHtml(p.name)}</span>
+            <span class="status ${cashedOut ? 'cashed':'playing'}">${cashedOut ? 'Cashed out' : 'Playing'}</span>
+          </div>
+          <div class="stat-line">
+            <span>Buy-in: <b>${money(buyIn)}</b> (${entry.buyIns.length}×)</span>
+            <span>Net: <b class="net ${net >= 0 ? 'pos':'neg'}">${net >= 0 ? '+' : ''}${money(net)}</b></span>
+          </div>
+          ${!cashedOut ? `
+            <div class="quickbuy">
+              <button class="btn-chip btn-sm" data-action="buyin" data-player="${p.id}" data-amount="20">+$20</button>
+              <button class="btn-chip btn-sm" data-action="buyin" data-player="${p.id}" data-amount="50">+$50</button>
+              <button class="btn-chip btn-sm" data-action="buyin" data-player="${p.id}" data-amount="100">+$100</button>
+              <input type="number" class="btn-sm" style="width:80px" placeholder="custom" id="custom-${p.id}" min="0" step="0.01">
+              <button class="btn-ghost btn-sm" data-action="buyin-custom" data-player="${p.id}">Add</button>
+              ${entry.buyIns.length ? `<button class="btn-ghost btn-sm" data-action="undo-buyin" data-player="${p.id}">Undo last</button>` : ""}
+            </div>
+            <div class="cashout-row">
+              <input type="number" placeholder="Final chips" id="cashout-${p.id}" min="0" step="0.01">
+              <button class="btn-primary btn-sm" data-action="cashout" data-player="${p.id}">Cash out</button>
+              <button class="btn-danger btn-sm" data-action="remove-player" data-player="${p.id}">Remove</button>
+            </div>
+          ` : `
+            <div class="row">
+              <button class="btn-ghost btn-sm" data-action="reopen" data-player="${p.id}">Reopen</button>
+            </div>
+          `}
+        </div>
+      `;
+    }).join("");
+
+    return `
+      <div class="card">
+        <input type="text" class="titlebar-input" id="sessionTitle" value="${escapeHtml(session.title)}">
+        <div class="hint" style="text-align:left; margin-top:0;">${fmtDate(session.date)}</div>
+      </div>
+
+      ${balanceHtml}
+
+      <div class="card">
+        <h2>Players</h2>
+        ${playersHtml}
+        <div class="row" style="margin-top:4px;">
+          <input type="text" id="newPlayerInput2" class="grow" placeholder="Add another player" list="rosterList">
+          <button class="btn-primary" id="addPlayerBtn2">Add</button>
+        </div>
+        <datalist id="rosterList">
+          ${db.players.map(p => `<option value="${escapeHtml(p.name)}">`).join("")}
+        </datalist>
+      </div>
+
+      <div class="row wrap">
+        <button class="btn-ghost" id="copySummaryBtn">📋 Copy Summary</button>
+        <button class="btn-primary" id="finishNightBtn">✅ Finish Night</button>
+      </div>
+    `;
+  }
+
+  function renderHistory(){
+    const finished = db.sessions.filter(s => s.finished).sort((a,b) => new Date(b.date) - new Date(a.date));
+    if(finished.length === 0){
+      return `<div class="card"><div class="empty">No finished nights yet.<br>Wrap up tonight's game to see it here.</div></div>`;
+    }
+    return finished.map(session => {
+      const totals = computeSessionTotals(session);
+      const rows = session.entries.slice().sort((a,b) => entryNet(b) - entryNet(a)).map(e => {
+        const p = getPlayer(e.playerId);
+        const net = entryNet(e);
+        return `<tr>
+          <td>${escapeHtml(p ? p.name : "?")}</td>
+          <td>${money(e.buyIns.reduce((a,b)=>a+b,0))}</td>
+          <td>${e.cashOut !== null && e.cashOut !== undefined ? money(e.cashOut) : "—"}</td>
+          <td class="net ${net>=0?'pos':'neg'}">${net>=0?'+':''}${money(net)}</td>
+        </tr>`;
+      }).join("");
+      return `
+        <div class="card session-summary">
+          <div class="title-row">
+            <span class="title">${escapeHtml(session.title)}</span>
+            <span class="date">${fmtDate(session.date)}</span>
+          </div>
+          <table>
+            <thead><tr><th>Player</th><th>Buy-in</th><th>Cash-out</th><th>Net</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div class="row between" style="margin-top:10px;">
+            <span class="hint" style="margin:0;">Pot: ${money(totals.totalBuyIn)}</span>
+            <button class="btn-danger btn-sm" data-action="delete-session" data-session="${session.id}">Delete</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function renderLeaderboard(){
+    const stats = computeLifetimeStats();
+    if(stats.length === 0){
+      return `<div class="card"><div class="empty">No finished nights yet.<br>Finish a game to start the leaderboard.</div></div>`;
+    }
+    const maxAbs = Math.max(...stats.map(s => Math.abs(s.net)), 1);
+    const rows = stats.map(s => `
+      <div class="card" style="margin-bottom:10px; padding:14px;">
+        <div class="row between">
+          <span class="name" style="font-size:15px;">${escapeHtml(s.name)}</span>
+          <span class="net ${s.net>=0?'pos':'neg'}" style="font-size:16px;">${s.net>=0?'+':''}${money(s.net)}</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill ${s.net>=0?'pos':'neg'}" style="width:${Math.min(100, Math.abs(s.net)/maxAbs*100)}%"></div></div>
+        <div class="stat-line" style="margin-top:8px; margin-bottom:0;">
+          <span>${s.nights} night${s.nights===1?'':'s'}</span>
+          <span>Buy-in ${money(s.totalBuyIn)}</span>
+          <span>Cash-out ${money(s.totalCashOut)}</span>
+          <span>Best ${s.best>=0?'+':''}${money(s.best)}</span>
+          <span>Worst ${s.worst>=0?'+':''}${money(s.worst)}</span>
+        </div>
+      </div>
+    `).join("");
+    return rows;
+  }
+
+  function renderData(){
+    const finishedCount = db.sessions.filter(s => s.finished).length;
+    return `
+      <div class="card">
+        <h2>Backup & Restore</h2>
+        <div class="hint" style="margin-bottom:12px; text-align:left;">
+          Everything is stored only in this browser (localStorage). Export a backup regularly, especially before
+          clearing browser data, switching browsers, or moving to a new device.
+        </div>
+        <div class="row wrap">
+          <button class="btn-primary" id="exportBtn">⬇ Export Backup (.json)</button>
+          <button class="btn-ghost" id="importBtn">⬆ Import Backup</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Stats</h2>
+        <div class="stat-line" style="margin:0;">
+          <span>Players tracked: <b>${db.players.length}</b></span>
+          <span>Nights finished: <b>${finishedCount}</b></span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Danger Zone</h2>
+        <button class="btn-danger" id="resetBtn">Erase all data</button>
+      </div>
+    `;
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  function bindDynamicEvents(){
+    const main = document.getElementById("main");
+
+    const addBtn = document.getElementById("addPlayerBtn");
+    const addInput = document.getElementById("newPlayerInput");
+    if(addBtn && addInput){
+      addBtn.addEventListener("click", () => { addPlayerToSession(addInput.value); addInput.value=""; });
+      addInput.addEventListener("keydown", e => { if(e.key === "Enter"){ addPlayerToSession(addInput.value); addInput.value=""; } });
+    }
+    const addBtn2 = document.getElementById("addPlayerBtn2");
+    const addInput2 = document.getElementById("newPlayerInput2");
+    if(addBtn2 && addInput2){
+      addBtn2.addEventListener("click", () => { addPlayerToSession(addInput2.value); addInput2.value=""; });
+      addInput2.addEventListener("keydown", e => { if(e.key === "Enter"){ addPlayerToSession(addInput2.value); addInput2.value=""; } });
+    }
+
+    const titleInput = document.getElementById("sessionTitle");
+    if(titleInput){
+      titleInput.addEventListener("change", () => {
+        const session = getCurrentSession();
+        if(session){ session.title = titleInput.value.trim() || session.title; saveDB(); }
+      });
+    }
+
+    main.querySelectorAll("[data-action=buyin]").forEach(btn => {
+      btn.addEventListener("click", () => addBuyIn(btn.dataset.player, parseFloat(btn.dataset.amount)));
+    });
+    main.querySelectorAll("[data-action=buyin-custom]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const input = document.getElementById("custom-" + btn.dataset.player);
+        const amount = parseFloat(input.value);
+        if(!isNaN(amount) && amount > 0){ addBuyIn(btn.dataset.player, amount); }
+      });
+    });
+    main.querySelectorAll("[data-action=undo-buyin]").forEach(btn => {
+      btn.addEventListener("click", () => undoLastBuyIn(btn.dataset.player));
+    });
+    main.querySelectorAll("[data-action=cashout]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const input = document.getElementById("cashout-" + btn.dataset.player);
+        const amount = parseFloat(input.value);
+        if(!isNaN(amount) && amount >= 0){ setCashOut(btn.dataset.player, amount); }
+        else{ alert("Enter the final chip count before cashing out."); }
+      });
+    });
+    main.querySelectorAll("[data-action=reopen]").forEach(btn => {
+      btn.addEventListener("click", () => reopenPlayer(btn.dataset.player));
+    });
+    main.querySelectorAll("[data-action=remove-player]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if(confirm("Remove this player from tonight?")) removePlayerFromSession(btn.dataset.player);
+      });
+    });
+    main.querySelectorAll("[data-action=delete-session]").forEach(btn => {
+      btn.addEventListener("click", () => deleteSession(btn.dataset.session));
+    });
+
+    const copyBtn = document.getElementById("copySummaryBtn");
+    if(copyBtn) copyBtn.addEventListener("click", copySummary);
+    const finishBtn = document.getElementById("finishNightBtn");
+    if(finishBtn) finishBtn.addEventListener("click", finishNight);
+
+    const exportBtn = document.getElementById("exportBtn");
+    if(exportBtn) exportBtn.addEventListener("click", exportData);
+    const importBtn = document.getElementById("importBtn");
+    if(importBtn) importBtn.addEventListener("click", () => document.getElementById("importFile").click());
+    const resetBtn = document.getElementById("resetBtn");
+    if(resetBtn) resetBtn.addEventListener("click", () => {
+      if(confirm("This will permanently erase all players and history. Are you sure?")){
+        db = { players: [], sessions: [], currentSessionId: null };
+        saveDB();
+        toast("All data erased");
+        render();
+      }
+    });
+  }
+
+  document.getElementById("importFile").addEventListener("change", e => {
+    const file = e.target.files[0];
+    if(file) importData(file);
+    e.target.value = "";
+  });
+
+  document.querySelectorAll("nav.tabs button").forEach(btn => {
+    btn.addEventListener("click", () => { activeTab = btn.dataset.tab; render(); });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
