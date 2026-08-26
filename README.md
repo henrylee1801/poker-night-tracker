@@ -1,4 +1,4 @@
-# Mines Poker Tracker
+# Stardust Poker Tracker
 
 A single-file, no-backend poker night tracker: buy-ins, cash-outs, per-night
 results, and a running lifetime leaderboard. Everything is stored in your
