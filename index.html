@@ -508,6 +508,17 @@
   }
   .leaderboard-sort .filter-btn.active{background:linear-gradient(135deg, var(--violet), #5c3fa8); color:#150a2b;}
 
+  .missions-lb-list{display:flex; flex-direction:column;}
+  .missions-lb-row{display:flex; align-items:center; gap:12px; padding:11px 2px; border-bottom:1px solid var(--line-soft);}
+  .missions-lb-row:last-child{border-bottom:none;}
+  .missions-lb-name{flex:1; font-family:var(--font-display); font-weight:700; font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .missions-lb-count{
+    display:flex; align-items:baseline; gap:5px;
+    font-family:var(--font-mono); font-weight:700; font-size:17px; color:var(--cyan);
+    font-variant-numeric:tabular-nums; text-shadow:0 0 10px rgba(77,238,234,.3);
+  }
+  .missions-lb-unit{font-family:var(--font-mono); font-weight:400; font-size:10.5px; text-transform:uppercase; letter-spacing:.6px; color:var(--ink-dim); text-shadow:none;}
+
   .session-summary .title-row{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; gap:10px;}
   .session-summary .title{font-family:var(--font-display); font-weight:700; font-size:13.5px; letter-spacing:.3px; text-transform:uppercase;}
   .session-summary .date{font-family:var(--font-mono); font-size:11px; color:var(--ink-dim); white-space:nowrap;}
@@ -784,6 +795,7 @@
   let cashoutMenuPlayer = null;
   let editingSessionId = null;
   let leaderboardSort = "net";
+  let leaderboardSearch = "";
   let historyDateFrom = "";
   let historyDateTo = "";
   let expandedSessions = new Set();
@@ -1968,17 +1980,54 @@
     }
 
     const filterHtml = `
+      <div class="row" style="margin-bottom:10px;">
+        <input type="text" id="leaderboardSearchInput" placeholder="Search player&hellip;" autocomplete="off" value="${escapeHtml(leaderboardSearch)}">
+      </div>
       <div class="leaderboard-sort">
         <button type="button" class="filter-btn ${leaderboardSort==='net'?'active':''}" data-sort="net">Sort: Net</button>
         <button type="button" class="filter-btn ${leaderboardSort==='missions'?'active':''}" data-sort="missions">Sort: Missions</button>
       </div>
     `;
 
-    const sortedStats = stats.slice();
+    return `${filterHtml}<div id="leaderboardResults">${renderLeaderboardResultsHtml(stats)}</div>`;
+  }
+
+  function renderLeaderboardResultsHtml(stats){
+    const query = leaderboardSearch.trim().toLowerCase();
+    const filtered = query ? stats.filter(s => s.name.toLowerCase().includes(query)) : stats;
+
+    if(filtered.length === 0){
+      return `<div class="card">${bracketDecor()}<div class="empty"><svg class="icon"><use href="#icon-medal"/></svg><br>No players match &ldquo;${escapeHtml(leaderboardSearch.trim())}&rdquo;.</div></div>`;
+    }
+
+    const sortedStats = filtered.slice();
     if(leaderboardSort === "missions") sortedStats.sort((a,b) => b.nights - a.nights || b.net - a.net);
     else sortedStats.sort((a,b) => b.net - a.net);
 
-    const rows = sortedStats.map((s, i) => {
+    if(leaderboardSort === "missions") return renderMissionsLeaderboardHtml(sortedStats);
+    return renderNetLeaderboardHtml(sortedStats);
+  }
+
+  function renderMissionsLeaderboardHtml(sortedStats){
+    const rows = sortedStats.map((s, i) => `
+      <div class="missions-lb-row">
+        <span class="rank-badge ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</span>
+        <span class="missions-lb-name">${escapeHtml(s.name)}</span>
+        <span class="missions-lb-count">${s.nights}<span class="missions-lb-unit">${s.nights===1?'night':'nights'}</span></span>
+      </div>
+    `).join("");
+    return `
+      <div class="card">
+        ${bracketDecor()}
+        <div class="eyebrow">Attendance Log</div>
+        <h2>Most Nights Played</h2>
+        <div class="missions-lb-list">${rows}</div>
+      </div>
+    `;
+  }
+
+  function renderNetLeaderboardHtml(sortedStats){
+    return `<div class="leaderboard-grid">${sortedStats.map((s, i) => {
       const expanded = expandedLeaderboardPlayers.has(s.playerId);
 
       const detailsHtml = expanded ? `
@@ -1999,7 +2048,7 @@
             <span class="lb-net-pill ${s.net>=0?'pos':'neg'}">${s.net>=0?'+':''}${money(s.net)}</span>
           </div>
           <div class="lb-chips">
-            <span class="lb-chip ${leaderboardSort==='missions'?'emphasis':''}"><svg class="icon"><use href="#icon-radar"/></svg>${s.nights} ${s.nights===1?'night':'nights'}</span>
+            <span class="lb-chip"><svg class="icon"><use href="#icon-radar"/></svg>${s.nights} ${s.nights===1?'night':'nights'}</span>
             <span class="lb-chip">Buy-in <b>${money(s.totalBuyIn)}</b></span>
             <span class="lb-chip">Cash-out <b>${money(s.totalCashOut)}</b></span>
             ${streakChipHtml(s)}
@@ -2011,8 +2060,25 @@
           ${detailsHtml}
         </div>
       `;
-    }).join("");
-    return `${filterHtml}<div class="leaderboard-grid">${rows}</div>`;
+    }).join("")}</div>`;
+  }
+
+  function refreshLeaderboardResults(){
+    const container = document.getElementById("leaderboardResults");
+    if(!container) return;
+    container.innerHTML = renderLeaderboardResultsHtml(computeLifetimeStats());
+    bindLeaderboardResultEvents(container);
+  }
+
+  function bindLeaderboardResultEvents(root){
+    root.querySelectorAll("[data-action=toggle-leaderboard-player]").forEach(el => {
+      el.addEventListener("click", () => {
+        const id = el.dataset.player;
+        if(expandedLeaderboardPlayers.has(id)) expandedLeaderboardPlayers.delete(id);
+        else expandedLeaderboardPlayers.add(id);
+        refreshLeaderboardResults();
+      });
+    });
   }
 
   function renderData(){
@@ -2114,14 +2180,15 @@
         render();
       });
     });
-    main.querySelectorAll("[data-action=toggle-leaderboard-player]").forEach(el => {
-      el.addEventListener("click", () => {
-        const id = el.dataset.player;
-        if(expandedLeaderboardPlayers.has(id)) expandedLeaderboardPlayers.delete(id);
-        else expandedLeaderboardPlayers.add(id);
-        render();
+    bindLeaderboardResultEvents(main);
+
+    const leaderboardSearchInput = document.getElementById("leaderboardSearchInput");
+    if(leaderboardSearchInput){
+      leaderboardSearchInput.addEventListener("input", () => {
+        leaderboardSearch = leaderboardSearchInput.value;
+        refreshLeaderboardResults();
       });
-    });
+    }
 
     const addBtn2 = document.getElementById("addPlayerBtn2");
     const addInput2 = document.getElementById("newPlayerInput2");
