@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <title>Stardust Poker Tracker</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><path d=%22M12 2 L19 20 L12 16 L5 20 Z%22 fill=%22%234deeea%22/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><path d=%22M12.00,14.26 L12.04,14.56 L12.28,15.37 L12.90,16.46 L13.96,17.52 L15.41,18.25 L17.11,18.42 L18.82,17.96 L20.30,16.90 L21.29,15.40 L21.64,13.66 L21.29,11.86 L20.30,10.11 L18.82,8.46 L17.11,6.92 L15.41,5.46 L13.96,4.10 L12.90,2.87 L12.28,1.88 L12.04,1.23 L12.00,1.00 L11.96,1.23 L11.72,1.88 L11.10,2.87 L10.04,4.10 L8.59,5.46 L6.89,6.92 L5.18,8.46 L3.70,10.11 L2.71,11.86 L2.36,13.66 L2.71,15.40 L3.70,16.90 L5.18,17.96 L6.89,18.42 L8.59,18.25 L10.04,17.52 L11.10,16.46 L11.72,15.37 L11.96,14.56 Z M10.85,13.06 L13.15,13.06 L12.00,23.00 Z%22 fill=%22%234deeea%22/></svg>">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
 <meta name="theme-color" content="#05070d">
@@ -2049,10 +2049,6 @@
         ${bracketDecor()}
         <div class="eyebrow">Ship's Archive</div>
         <h2>Backup &amp; Restore</h2>
-        <div class="hint" style="margin-bottom:14px; text-align:left;">
-          Everything is stored only in this browser (localStorage). Export a backup regularly, especially before
-          clearing browser data, switching browsers, or moving to a new device.
-        </div>
         <div class="row wrap">
           <button class="btn-primary" id="exportBtn"><svg class="icon"><use href="#icon-download"/></svg>Export Backup</button>
           <button class="btn-ghost" id="importBtn"><svg class="icon"><use href="#icon-upload"/></svg>Import Backup</button>
@@ -2062,10 +2058,6 @@
         ${bracketDecor()}
         <div class="eyebrow">Crew Roster &middot; A&ndash;Z</div>
         <h2>Manage Players</h2>
-        <div class="hint" style="margin-bottom:14px; text-align:left;">
-          Players are usually added automatically from game nights &mdash; add one here only if needed.
-          Use the pencil to fix a typo, or the bin to remove someone from suggestions for good.
-        </div>
         <div class="row" style="margin-bottom:14px;">
           <input type="text" id="newRosterPlayerInput" class="grow" placeholder="Add a player" autocomplete="off">
           <button class="btn-primary btn-sm" id="addRosterPlayerBtn"><svg class="icon"><use href="#icon-plus"/></svg>Add</button>
