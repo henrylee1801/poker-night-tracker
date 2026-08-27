@@ -1328,13 +1328,24 @@
     const rect = triggerEl.getBoundingClientRect();
     const margin = 10;
     const bottomReserved = 76; // clears the fixed bottom tab bar
+    // Use the visual viewport (not window.innerWidth/Height) so this stays
+    // correct on phones once the on-screen keyboard shrinks the visible
+    // area — window.innerHeight doesn't reflect that on iOS Safari, and a
+    // position:fixed box needs the visual viewport's offset too, since it's
+    // otherwise placed relative to the (keyboard-unaware) layout viewport.
+    const vv = window.visualViewport;
+    const vpLeft = vv ? vv.offsetLeft : 0;
+    const vpTop = vv ? vv.offsetTop : 0;
+    const vpWidth = vv ? vv.width : window.innerWidth;
+    const vpHeight = vv ? vv.height : window.innerHeight;
+
     let left = rect.left;
-    if(left + menu.offsetWidth > window.innerWidth - margin) left = window.innerWidth - margin - menu.offsetWidth;
-    if(left < margin) left = margin;
+    if(left + menu.offsetWidth > vpLeft + vpWidth - margin) left = vpLeft + vpWidth - margin - menu.offsetWidth;
+    if(left < vpLeft + margin) left = vpLeft + margin;
     let top = rect.bottom + 8;
-    if(top + menu.offsetHeight > window.innerHeight - bottomReserved){
+    if(top + menu.offsetHeight > vpTop + vpHeight - bottomReserved){
       top = rect.top - menu.offsetHeight - 8;
-      if(top < margin) top = margin;
+      if(top < vpTop + margin) top = vpTop + margin;
     }
     menu.style.left = left + "px";
     menu.style.top = top + "px";
@@ -2377,8 +2388,29 @@
   document.addEventListener("keydown", e => {
     if(e.key === "Escape" && (buyinMenuPlayer || cashoutMenuPlayer || playerSuggestInputEl)) closeAllPopovers();
   });
-  window.addEventListener("resize", () => { if(buyinMenuPlayer || cashoutMenuPlayer || playerSuggestInputEl) closeAllPopovers(); });
-  window.addEventListener("scroll", () => { if(buyinMenuPlayer || cashoutMenuPlayer || playerSuggestInputEl) closeAllPopovers(); }, true);
+  function repositionPlayerSuggest(){
+    if(!playerSuggestInputEl) return;
+    const box = document.getElementById("playerSuggest");
+    if(box) positionPopover(box, playerSuggestInputEl);
+  }
+  // Resize/scroll can fire just from the on-screen keyboard opening (e.g.
+  // right when the suggest box is opened by focusing the field) — closing
+  // it here would race with opening it, so buyin/cashout still close on
+  // these, but the suggest box just repositions to follow the keyboard.
+  window.addEventListener("resize", () => {
+    if(buyinMenuPlayer) closeBuyInMenu();
+    if(cashoutMenuPlayer) closeCashOutMenu();
+    repositionPlayerSuggest();
+  });
+  window.addEventListener("scroll", () => {
+    if(buyinMenuPlayer) closeBuyInMenu();
+    if(cashoutMenuPlayer) closeCashOutMenu();
+    repositionPlayerSuggest();
+  }, true);
+  if(window.visualViewport){
+    window.visualViewport.addEventListener("resize", repositionPlayerSuggest);
+    window.visualViewport.addEventListener("scroll", repositionPlayerSuggest);
+  }
 
   document.getElementById("modalOkBtn").addEventListener("click", () => closeModal(true));
   document.getElementById("modalCancelBtn").addEventListener("click", () => closeModal(false));
