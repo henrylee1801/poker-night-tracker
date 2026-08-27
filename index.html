@@ -387,20 +387,6 @@
   .roster-row.editing{padding-left:8px;}
   .roster-row input{flex:1; min-width:0;}
 
-  /* ---------- Player name suggestion dropdown ---------- */
-  .suggest-box{width:280px; max-height:308px; overflow-y:auto; padding:8px;}
-  .suggest-row{
-    display:flex; align-items:center; gap:4px;
-    padding:9px 8px; cursor:pointer;
-    clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
-    transition:background .12s ease;
-  }
-  .suggest-row:hover{background:var(--void-2);}
-  .suggest-row.editing{padding:6px 8px; cursor:default;}
-  .suggest-name{
-    flex:1; font-family:var(--font-body); font-size:14.5px; color:var(--ink);
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  }
   .suggest-icon-btn{
     background:none; border:none; clip-path:none; padding:5px; color:var(--ink-dim);
     display:inline-flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;
@@ -408,8 +394,6 @@
   .suggest-icon-btn .icon{width:14px; height:14px;}
   .suggest-icon-btn:hover{color:var(--cyan);}
   .suggest-icon-btn.danger:hover{color:var(--danger);}
-  .suggest-edit-input{flex:1; padding:6px 8px; font-size:13.5px;}
-  .suggest-empty{padding:14px 8px; color:var(--ink-dim); font-family:var(--font-mono); font-size:12px; text-align:center;}
 
   table{width:100%; border-collapse:collapse; font-size:13.5px;}
   th,td{text-align:left; padding:9px 6px; border-bottom:1px solid var(--line-soft);}
@@ -801,8 +785,6 @@
   let expandedSessions = new Set();
   let expandedDashboardPlayers = new Set();
   let expandedLeaderboardPlayers = new Set();
-  let playerSuggestInputEl = null;
-  let playerSuggestEditingId = null;
   let editingRosterPlayerId = null;
   const CHIP_DENOMS = [
     { cents:10,  label:"10&cent;", cls:"chip-10c" },
@@ -1343,7 +1325,6 @@
   function closeAllPopovers(){
     closeBuyInMenu();
     closeCashOutMenu();
-    closePlayerSuggest();
   }
 
   /* ---------- Buy-in popover menu ---------- */
@@ -1512,132 +1493,6 @@
     menu.classList.add("open");
     positionPopover(menu, triggerEl);
     if(inputs[0]) inputs[0].focus();
-  }
-
-  /* ---------- Player name suggestion dropdown ---------- */
-  function closePlayerSuggest(){
-    const box = document.getElementById("playerSuggest");
-    if(box) box.classList.remove("open");
-    playerSuggestInputEl = null;
-    playerSuggestEditingId = null;
-  }
-
-  function refreshPlayerSuggest(){
-    if(!playerSuggestInputEl) return;
-    const box = document.getElementById("playerSuggest");
-    if(!box) return;
-
-    const query = playerSuggestInputEl.value.trim().toLowerCase();
-    const matches = db.players
-      .filter(p => !p.archived)
-      .filter(p => !query || p.name.toLowerCase().includes(query))
-      .sort((a,b) => a.name.localeCompare(b.name))
-      .slice(0, 8);
-
-    box.innerHTML = matches.length === 0
-      ? `<div class="suggest-empty">No matches</div>`
-      : matches.map(p => {
-          if(playerSuggestEditingId === p.id){
-            return `
-              <div class="suggest-row editing">
-                <input type="text" class="suggest-edit-input" id="suggestEdit-${p.id}" value="${escapeHtml(p.name)}">
-                <button type="button" class="suggest-icon-btn" data-suggest-save="${p.id}" aria-label="Save"><svg class="icon"><use href="#icon-check"/></svg></button>
-                <button type="button" class="suggest-icon-btn" data-suggest-cancel-edit aria-label="Cancel"><svg class="icon"><use href="#icon-x"/></svg></button>
-              </div>
-            `;
-          }
-          return `
-            <div class="suggest-row">
-              <span class="suggest-name" data-suggest-pick="${p.id}">${escapeHtml(p.name)}</span>
-              <button type="button" class="suggest-icon-btn" data-suggest-edit="${p.id}" aria-label="Edit"><svg class="icon"><use href="#icon-edit"/></svg></button>
-              <button type="button" class="suggest-icon-btn danger" data-suggest-remove="${p.id}" aria-label="Remove"><svg class="icon"><use href="#icon-x"/></svg></button>
-            </div>
-          `;
-        }).join("");
-
-    box.querySelectorAll("[data-suggest-pick]").forEach(el => {
-      el.addEventListener("pointerdown", e => {
-        e.preventDefault(); // stop the input from blurring before the pick registers (mobile double-tap fix)
-        const p = getPlayer(el.dataset.suggestPick);
-        const input = playerSuggestInputEl;
-        if(p && input) input.value = p.name;
-        closePlayerSuggest();
-        if(input) input.focus();
-      });
-    });
-    box.querySelectorAll("[data-suggest-edit]").forEach(el => {
-      el.addEventListener("pointerdown", e => {
-        e.preventDefault();
-        e.stopPropagation();
-        playerSuggestEditingId = el.dataset.suggestEdit;
-        refreshPlayerSuggest();
-        const inp = document.getElementById("suggestEdit-" + playerSuggestEditingId);
-        if(inp){ inp.focus(); inp.select(); }
-      });
-    });
-    box.querySelectorAll("[data-suggest-remove]").forEach(el => {
-      el.addEventListener("pointerdown", e => {
-        e.preventDefault();
-        e.stopPropagation();
-        const p = getPlayer(el.dataset.suggestRemove);
-        if(p){ p.archived = true; saveDB(); }
-        refreshPlayerSuggest();
-      });
-    });
-    box.querySelectorAll("[data-suggest-save]").forEach(el => {
-      el.addEventListener("pointerdown", e => {
-        e.preventDefault();
-        e.stopPropagation();
-        const id = el.dataset.suggestSave;
-        const inp = document.getElementById("suggestEdit-" + id);
-        if(inp) renamePlayer(id, inp.value);
-        playerSuggestEditingId = null;
-        refreshPlayerSuggest();
-      });
-    });
-    box.querySelectorAll("[data-suggest-cancel-edit]").forEach(el => {
-      el.addEventListener("pointerdown", e => {
-        e.preventDefault();
-        e.stopPropagation();
-        playerSuggestEditingId = null;
-        refreshPlayerSuggest();
-      });
-    });
-    const editInput = box.querySelector(".suggest-edit-input");
-    if(editInput){
-      editInput.addEventListener("pointerdown", e => e.stopPropagation());
-      editInput.addEventListener("keydown", e => {
-        if(e.key === "Enter"){
-          e.preventDefault();
-          renamePlayer(playerSuggestEditingId, editInput.value);
-          playerSuggestEditingId = null;
-          refreshPlayerSuggest();
-        }else if(e.key === "Escape"){
-          e.preventDefault();
-          playerSuggestEditingId = null;
-          refreshPlayerSuggest();
-        }
-      });
-    }
-
-    if(playerSuggestInputEl) positionPopover(box, playerSuggestInputEl);
-  }
-
-  function openPlayerSuggest(inputEl){
-    if(!db.players.some(p => !p.archived)){ closePlayerSuggest(); return; }
-    playerSuggestInputEl = inputEl;
-    playerSuggestEditingId = null;
-    closeBuyInMenu();
-    closeCashOutMenu();
-    let box = document.getElementById("playerSuggest");
-    if(!box){
-      box = document.createElement("div");
-      box.id = "playerSuggest";
-      box.className = "buyin-menu suggest-box";
-      document.body.appendChild(box);
-    }
-    box.classList.add("open");
-    refreshPlayerSuggest();
   }
 
   function renderDashboard(){
@@ -1822,9 +1677,12 @@
         <h2>Players</h2>
         <div class="player-grid">${playersHtml}</div>
         <div class="row" style="margin-top:4px;">
-          <input type="text" id="newPlayerInput2" class="grow" placeholder="${session.entries.length === 0 ? "Player name" : "Add another player"}" autocomplete="off">
+          <input type="text" id="newPlayerInput2" class="grow" placeholder="${session.entries.length === 0 ? "Player name" : "Add another player"}" autocomplete="off" list="rosterSuggestList">
           <button class="btn-primary" id="addPlayerBtn2"><svg class="icon"><use href="#icon-plus"/></svg>Add</button>
         </div>
+        <datalist id="rosterSuggestList">
+          ${db.players.filter(p => !p.archived).sort((a,b) => a.name.localeCompare(b.name)).map(p => `<option value="${escapeHtml(p.name)}">`).join("")}
+        </datalist>
         ${session.entries.length === 0 ? `<div class="hint">Add each player as they sit down · log buy-ins as you go</div>` : ""}
       </div>
 
@@ -2196,10 +2054,7 @@
       addBtn2.addEventListener("click", () => { addPlayerToSession(addInput2.value); addInput2.value=""; });
       addInput2.addEventListener("keydown", e => {
         if(e.key === "Enter"){ addPlayerToSession(addInput2.value); addInput2.value=""; }
-        else if(e.key === "Escape"){ closePlayerSuggest(); }
       });
-      addInput2.addEventListener("focus", () => openPlayerSuggest(addInput2));
-      addInput2.addEventListener("input", () => openPlayerSuggest(addInput2));
     }
 
     const titleInput = document.getElementById("sessionTitle");
@@ -2363,22 +2218,19 @@
   });
 
   document.addEventListener("click", e => {
-    if(!buyinMenuPlayer && !cashoutMenuPlayer && !playerSuggestInputEl) return;
+    if(!buyinMenuPlayer && !cashoutMenuPlayer) return;
     if(e.target.closest("[data-action=toggle-buyin-menu],[data-action=toggle-cashout-menu]")) return;
-    if(playerSuggestInputEl && e.target === playerSuggestInputEl) return;
     const buyinMenu = document.getElementById("buyinMenu");
     if(buyinMenu && buyinMenu.contains(e.target)) return;
     const cashoutMenu = document.getElementById("cashoutMenu");
     if(cashoutMenu && cashoutMenu.contains(e.target)) return;
-    const suggestBox = document.getElementById("playerSuggest");
-    if(suggestBox && suggestBox.contains(e.target)) return;
     closeAllPopovers();
   });
   document.addEventListener("keydown", e => {
-    if(e.key === "Escape" && (buyinMenuPlayer || cashoutMenuPlayer || playerSuggestInputEl)) closeAllPopovers();
+    if(e.key === "Escape" && (buyinMenuPlayer || cashoutMenuPlayer)) closeAllPopovers();
   });
-  window.addEventListener("resize", () => { if(buyinMenuPlayer || cashoutMenuPlayer || playerSuggestInputEl) closeAllPopovers(); });
-  window.addEventListener("scroll", () => { if(buyinMenuPlayer || cashoutMenuPlayer || playerSuggestInputEl) closeAllPopovers(); }, true);
+  window.addEventListener("resize", () => { if(buyinMenuPlayer || cashoutMenuPlayer) closeAllPopovers(); });
+  window.addEventListener("scroll", () => { if(buyinMenuPlayer || cashoutMenuPlayer) closeAllPopovers(); }, true);
 
   document.getElementById("modalOkBtn").addEventListener("click", () => closeModal(true));
   document.getElementById("modalCancelBtn").addEventListener("click", () => closeModal(false));
